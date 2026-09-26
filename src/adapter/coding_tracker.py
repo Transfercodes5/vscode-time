@@ -1,8 +1,8 @@
 """Adapter for hangxingliu.vscode-coding-tracker database files.
 
 This module reads the extension's plain-text .db files and normalizes
-records into Session objects. It filters for type-2 (coding/editing)
-records only, as established by Phase 2.5 duration semantics verification.
+records into Session objects. It filters for type-0 (watching)
+records only.
 """
 
 import hashlib
@@ -20,8 +20,8 @@ SUPPORTED_VERSIONS = {"4.0", "3.0"}
 # Record fields in storage format v4.0
 RECORD_FIELDS = 12
 
-# Only import type-2 (coding/editing) records
-IMPORT_RECORD_TYPES = {2}
+# Only import type-0 (watching) records
+IMPORT_RECORD_TYPES = {0}
 
 
 class CodingTrackerError(Exception):
@@ -278,11 +278,7 @@ def parse_db_file(filepath: Path) -> Tuple[List[Session], int, int]:
 
 
 def filter_coding_sessions(sessions: List[Session]) -> List[Session]:
-    """Filter to only type-2 (coding/editing) records.
-
-    Phase 2.5 established that only type-2 records represent actual
-    coding activity. Type-0 records are watching/open time.
-    """
+    """Filter to only type-0 (watching) records."""
     return [s for s in sessions if s.session_type in IMPORT_RECORD_TYPES]
 
 
@@ -300,7 +296,7 @@ class CodingTrackerAdapter:
         """Get all sessions from all source files.
 
         Args:
-            filter_coding: If True, only return type-2 coding records.
+            filter_coding: If True, only return type-0 watching records.
         """
         all_sessions = []
         for db_file in self.get_files():

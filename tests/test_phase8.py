@@ -59,7 +59,7 @@ def create_mock_session(start_time_ms, duration_seconds, **kwargs):
     class MockSession:
         def __init__(self):
             self.record_id = kwargs.get("record_id", f"test_{start_time_ms}")
-            self.session_type = kwargs.get("session_type", 2)
+            self.session_type = kwargs.get("session_type", 0)
             self.start_time = start_time_ms
             self.duration_seconds = duration_seconds
             self.language = kwargs.get("language", "python")
@@ -211,17 +211,17 @@ class TestSessionFields:
 class TestTypeFiltering:
     """Tests for session type filtering."""
 
-    def test_only_type2(self):
-        """Only type-2 sessions should be exported."""
-        print("9. ONLY TYPE-2 TEST")
+    def test_only_type0(self):
+        """Only type-0 (watching) sessions should be exported."""
+        print("9. ONLY TYPE-0 TEST")
 
         result = run_cmd(["export", "--json"])
         assert result.returncode == 0
 
         data = json.loads(result.stdout)
         for session in data["sessions"]:
-            assert session["session_type"] == 2, \
-                f"Non-type-2 session found: {session['session_type']}"
+            assert session["session_type"] == 0, \
+                f"Non-type-0 session found: {session['session_type']}"
 
         print("   PASS")
 

@@ -89,7 +89,7 @@ class Exporter:
                     duration_seconds, language, file, project,
                     vcs, line_count, char_count, source_file
                 FROM coding_sessions
-                WHERE session_type = 2
+                WHERE session_type = 0
                   AND start_time >= ? AND start_time <= ?
                 ORDER BY start_time ASC, source ASC, source_id ASC
             """, (start_ms, end_ms))
@@ -100,7 +100,7 @@ class Exporter:
                     duration_seconds, language, file, project,
                     vcs, line_count, char_count, source_file
                 FROM coding_sessions
-                WHERE session_type = 2
+                WHERE session_type = 0
                 ORDER BY start_time ASC, source ASC, source_id ASC
             """)
 

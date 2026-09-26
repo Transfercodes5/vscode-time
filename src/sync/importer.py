@@ -64,7 +64,7 @@ class Importer:
         This is the main sync operation. It:
         1. Discovers source files
         2. Parses them through the adapter
-        3. Filters to type-2 coding records
+        3. Filters to type-0 watching records
         4. Generates deterministic IDs
         5. Inserts new records (ignores duplicates)
 
@@ -99,7 +99,7 @@ class Importer:
             except Exception as e:
                 result.errors.append(f"Error parsing {db_file.name}: {str(e)}")
 
-        # 3. Filter to coding records only (type 2)
+        # 3. Filter to watching records only (type 0)
         coding_sessions = filter_coding_sessions(all_sessions)
         result.coding_records = len(coding_sessions)
 

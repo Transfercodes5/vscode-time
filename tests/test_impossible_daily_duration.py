@@ -68,8 +68,8 @@ class TestDurationUnits:
     def test_session_duration_converted_to_seconds(self, tmp_db_dir):
         """Session objects store duration in seconds, not milliseconds."""
         records = [
-            [2, 1789151444788, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
-            [2, 1789151529964, 20000, "python", "file2.py", "/proj", "unknown-linux", "git::master", 20, 2000, "0", "0"],
+            [0, 1789151444788, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
+            [0, 1789151529964, 20000, "python", "file2.py", "/proj", "unknown-linux", "git::master", 20, 2000, "0", "0"],
         ]
         create_source_file(tmp_db_dir, "test.db", records)
 
@@ -84,8 +84,8 @@ class TestDurationUnits:
     def test_daily_totals_use_seconds(self, tmp_db_dir):
         """Daily totals are summed in seconds, not milliseconds."""
         records = [
-            [2, 1789151444788, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
-            [2, 1789151529964, 20000, "python", "file2.py", "/proj", "unknown-linux", "git::master", 20, 2000, "0", "0"],
+            [0, 1789151444788, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
+            [0, 1789151529964, 20000, "python", "file2.py", "/proj", "unknown-linux", "git::master", 20, 2000, "0", "0"],
         ]
         create_source_file(tmp_db_dir, "test.db", records)
 
@@ -101,7 +101,7 @@ class TestDurationUnits:
     def test_large_duration_converted_correctly(self, tmp_db_dir):
         """A large source duration (e.g., 115000ms = 115s) is converted correctly."""
         records = [
-            [2, 1789151444788, 115000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
+            [0, 1789151444788, 115000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
         ]
         create_source_file(tmp_db_dir, "test.db", records)
 
@@ -118,7 +118,7 @@ class TestDailyUpperBound:
         """No single session should have duration > 86400 seconds after conversion."""
         # Source with a very large duration in ms (e.g., 100000000ms = 100000s = ~27.8h)
         records = [
-            [2, 1789151444788, 100000000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
+            [0, 1789151444788, 100000000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
         ]
         create_source_file(tmp_db_dir, "test.db", records)
 
@@ -132,10 +132,10 @@ class TestDailyUpperBound:
     def test_typical_session_durations(self, tmp_db_dir):
         """Typical session durations are in the range of seconds to minutes."""
         records = [
-            [2, 1789151444788, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],      # 5s
-            [2, 1789151529964, 60000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],     # 60s
-            [2, 1789151600000, 300000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],    # 5m
-            [2, 1789151900000, 1800000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],   # 30m
+            [0, 1789151444788, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],      # 5s
+            [0, 1789151529964, 60000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],     # 60s
+            [0, 1789151600000, 300000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],    # 5m
+            [0, 1789151900000, 1800000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],   # 30m
         ]
         create_source_file(tmp_db_dir, "test.db", records)
 
@@ -154,8 +154,8 @@ class TestDuplicateSync:
     def test_sync_twice_same_totals(self, tmp_db_dir, tmp_vscode_time_db):
         """Running sync twice should not change totals."""
         records = [
-            [2, 1789151444788, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
-            [2, 1789151529964, 20000, "python", "file2.py", "/proj", "unknown-linux", "git::master", 20, 2000, "0", "0"],
+            [0, 1789151444788, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
+            [0, 1789151529964, 20000, "python", "file2.py", "/proj", "unknown-linux", "git::master", 20, 2000, "0", "0"],
         ]
         create_source_file(tmp_db_dir, "test.db", records)
 
@@ -187,8 +187,8 @@ class TestDateFiltering:
         ts_today = 1789229000000
 
         records = [
-            [2, ts_yesterday, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
-            [2, ts_today, 10000, "python", "file2.py", "/proj", "unknown-linux", "git::master", 20, 2000, "0", "0"],
+            [0, ts_yesterday, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
+            [0, ts_today, 10000, "python", "file2.py", "/proj", "unknown-linux", "git::master", 20, 2000, "0", "0"],
         ]
         create_source_file(tmp_db_dir, "test.db", records)
 
@@ -202,7 +202,7 @@ class TestDateFiltering:
     def test_session_not_counted_twice(self, tmp_db_dir, tmp_vscode_time_db):
         """A session should only be counted once, not per language/project/file."""
         records = [
-            [2, 1789151444788, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
+            [0, 1789151444788, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
         ]
         create_source_file(tmp_db_dir, "test.db", records)
 
@@ -226,8 +226,8 @@ class TestMonthBoundary:
         ts_sep = 1756718400000
 
         records = [
-            [2, ts_aug, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
-            [2, ts_sep, 10000, "python", "file2.py", "/proj", "unknown-linux", "git::master", 20, 2000, "0", "0"],
+            [0, ts_aug, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
+            [0, ts_sep, 10000, "python", "file2.py", "/proj", "unknown-linux", "git::master", 20, 2000, "0", "0"],
         ]
         create_source_file(tmp_db_dir, "test.db", records)
 
@@ -250,8 +250,8 @@ class TestYearBoundary:
         ts_jan = 1767225660000
 
         records = [
-            [2, ts_dec, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
-            [2, ts_jan, 10000, "python", "file2.py", "/proj", "unknown-linux", "git::master", 20, 2000, "0", "0"],
+            [0, ts_dec, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
+            [0, ts_jan, 10000, "python", "file2.py", "/proj", "unknown-linux", "git::master", 20, 2000, "0", "0"],
         ]
         create_source_file(tmp_db_dir, "test.db", records)
 
@@ -272,7 +272,7 @@ class TestMidnight:
         ts_midnight = 1789185600000
 
         records = [
-            [2, ts_midnight, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
+            [0, ts_midnight, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
         ]
         create_source_file(tmp_db_dir, "test.db", records)
 
@@ -291,8 +291,12 @@ class TestJSONConsistency:
 
     def test_status_json_matches_text(self, tmp_db_dir, tmp_vscode_time_db):
         """status --json coding_seconds should match status text."""
+        from datetime import datetime
+        # Use today's noon to ensure it falls on today's date
+        today_noon = datetime.now().replace(hour=12, minute=0, second=0, microsecond=0)
+        ts = int(today_noon.timestamp() * 1000)
         records = [
-            [2, 1789151444788, 60000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
+            [0, ts, 60000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
         ]
         create_source_file(tmp_db_dir, "test.db", records)
 
@@ -316,9 +320,9 @@ class TestSourceDatabaseReconciliation:
     def test_source_matches_database(self, tmp_db_dir, tmp_vscode_time_db):
         """Total seconds from source should match database total."""
         records = [
-            [2, 1789151444788, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
-            [2, 1789151529964, 20000, "python", "file2.py", "/proj", "unknown-linux", "git::master", 20, 2000, "0", "0"],
-            [2, 1789151600000, 30000, "markdown", "doc.md", "/proj", "unknown-linux", "git::master", 50, 5000, "0", "0"],
+            [0, 1789151444788, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
+            [0, 1789151529964, 20000, "python", "file2.py", "/proj", "unknown-linux", "git::master", 20, 2000, "0", "0"],
+            [0, 1789151600000, 30000, "markdown", "doc.md", "/proj", "unknown-linux", "git::master", 50, 5000, "0", "0"],
         ]
         create_source_file(tmp_db_dir, "test.db", records)
 
@@ -336,11 +340,11 @@ class TestSourceDatabaseReconciliation:
         assert db_total == source_total_sec
 
     def test_record_count_matches(self, tmp_db_dir, tmp_vscode_time_db):
-        """Number of coding records in source should match database."""
+        """Number of watching records in source should match database."""
         records = [
-            [2, 1789151444788, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
-            [2, 1789151529964, 20000, "python", "file2.py", "/proj", "unknown-linux", "git::master", 20, 2000, "0", "0"],
-            [0, 1789151600000, 30000, "markdown", "doc.md", "/proj", "unknown-linux", "git::master", 50, 5000, "0", "0"],  # type 0, not coding
+            [0, 1789151444788, 5000, "python", "file.py", "/proj", "unknown-linux", "git::master", 10, 1000, "0", "0"],
+            [0, 1789151529964, 20000, "python", "file2.py", "/proj", "unknown-linux", "git::master", 20, 2000, "0", "0"],
+            [2, 1789151600000, 30000, "markdown", "doc.md", "/proj", "unknown-linux", "git::master", 50, 5000, "0", "0"],
         ]
         create_source_file(tmp_db_dir, "test.db", records)
 
@@ -349,7 +353,7 @@ class TestSourceDatabaseReconciliation:
         importer = Importer(tmp_vscode_time_db, adapter)
         result = importer.sync()
 
-        # Only 2 type-2 records should be imported
+        # Only 2 type-0 records should be imported; type-2 excluded
         assert result.coding_records == 2
         assert result.new_imported == 2
 
@@ -361,7 +365,7 @@ class TestRecordIDStability:
         """Same source fields produce the same ID."""
         id1 = compute_record_id(
             source="vscode-coding-tracker",
-            session_type=2,
+            session_type=0,
             start_time=1789151444788,
             duration_seconds=5,
             language="python",
@@ -373,7 +377,7 @@ class TestRecordIDStability:
         )
         id2 = compute_record_id(
             source="vscode-coding-tracker",
-            session_type=2,
+            session_type=0,
             start_time=1789151444788,
             duration_seconds=5,
             language="python",
@@ -390,7 +394,7 @@ class TestRecordIDStability:
         """Different source fields produce different IDs."""
         id1 = compute_record_id(
             source="vscode-coding-tracker",
-            session_type=2,
+            session_type=0,
             start_time=1789151444788,
             duration_seconds=5,
             language="python",
@@ -402,7 +406,7 @@ class TestRecordIDStability:
         )
         id2 = compute_record_id(
             source="vscode-coding-tracker",
-            session_type=2,
+            session_type=0,
             start_time=1789151444788,
             duration_seconds=10,  # Different duration
             language="python",
