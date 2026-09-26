@@ -24,6 +24,7 @@ class Database:
     def __init__(self, db_path: Optional[Path] = None):
         self.db_path = db_path or DEFAULT_DB_PATH
         self._conn: Optional[sqlite3.Connection] = None
+        self.project_filter: Optional[str] = None
 
     def connect(self) -> None:
         """Open database connection and ensure schema exists."""
@@ -39,6 +40,34 @@ class Database:
         if self._conn:
             self._conn.close()
             self._conn = None
+
+    def _project_where(self) -> Tuple[str, Tuple]:
+        """Get WHERE clause fragment for queries without an existing WHERE.
+
+        Returns:
+            ("", ()) when no filter is set, or
+            ("WHERE project = ?", (filter,)) when a filter is set.
+        """
+        if self.project_filter:
+            return "WHERE project = ?", (self.project_filter,)
+        return "", ()
+
+    def _project_and(self) -> Tuple[str, Tuple]:
+        """Get AND clause fragment for queries that already have a WHERE.
+
+        Returns:
+            ("", ()) when no filter is set, or
+            ("AND project = ?", (filter,)) when a filter is set.
+        """
+        if self.project_filter:
+            return "AND project = ?", (self.project_filter,)
+        return "", ()
+
+    def get_projects(self) -> List[str]:
+        """Get all distinct project names (unfiltered)."""
+        cursor = self._conn.cursor()
+        cursor.execute("SELECT DISTINCT project FROM coding_sessions ORDER BY project")
+        return [row["project"] for row in cursor.fetchall()]
 
     def _create_schema(self) -> None:
         """Create database schema if not exists."""
@@ -224,13 +253,17 @@ class Database:
     def get_coding_sessions(self, limit: Optional[int] = None) -> List[Dict]:
         """Get all coding sessions."""
         cursor = self._conn.cursor()
+        where, params = self._project_where()
         if limit:
             cursor.execute(
-                "SELECT * FROM coding_sessions ORDER BY start_time DESC LIMIT ?",
-                (limit,)
+                f"SELECT * FROM coding_sessions {where} ORDER BY start_time DESC LIMIT ?",
+                params + (limit,)
             )
         else:
-            cursor.execute("SELECT * FROM coding_sessions ORDER BY start_time DESC")
+            cursor.execute(
+                f"SELECT * FROM coding_sessions {where} ORDER BY start_time DESC",
+                params
+            )
         return [dict(row) for row in cursor.fetchall()]
 
     def get_coding_sessions_by_date(self, date_str: str) -> List[Dict]:
@@ -244,63 +277,75 @@ class Database:
         start_ms = int(dt_start.timestamp() * 1000)
         end_ms = int(dt_end.timestamp() * 1000)
 
+        proj_and, proj_params = self._project_and()
         cursor.execute(
-            "SELECT * FROM coding_sessions WHERE start_time >= ? AND start_time < ? ORDER BY start_time",
-            (start_ms, end_ms)
+            f"""SELECT * FROM coding_sessions
+                WHERE start_time >= ? AND start_time < ?
+                {proj_and}
+                ORDER BY start_time""",
+            (start_ms, end_ms) + proj_params
         )
         return [dict(row) for row in cursor.fetchall()]
 
     def get_daily_totals(self) -> List[Dict]:
         """Get total coding seconds per calendar day (using local timezone)."""
         cursor = self._conn.cursor()
-        cursor.execute("""
+        where, params = self._project_where()
+        cursor.execute(f"""
             SELECT
                 date(start_time / 1000, 'unixepoch', 'localtime') as day,
                 SUM(duration_seconds) as total_seconds,
                 COUNT(*) as session_count
             FROM coding_sessions
+            {where}
             GROUP BY day
             ORDER BY day DESC
-        """)
+        """, params)
         return [dict(row) for row in cursor.fetchall()]
 
     def get_project_totals(self) -> List[Dict]:
         """Get total coding seconds per project."""
         cursor = self._conn.cursor()
-        cursor.execute("""
+        where, params = self._project_where()
+        cursor.execute(f"""
             SELECT
                 project,
                 SUM(duration_seconds) as total_seconds,
                 COUNT(*) as session_count
             FROM coding_sessions
+            {where}
             GROUP BY project
             ORDER BY total_seconds DESC
-        """)
+        """, params)
         return [dict(row) for row in cursor.fetchall()]
 
     def get_total_coding_seconds(self) -> int:
         """Get total coding seconds across all sessions."""
         cursor = self._conn.cursor()
-        cursor.execute("SELECT COALESCE(SUM(duration_seconds), 0) as total FROM coding_sessions")
+        where, params = self._project_where()
+        cursor.execute(f"SELECT COALESCE(SUM(duration_seconds), 0) as total FROM coding_sessions {where}", params)
         row = cursor.fetchone()
         return row["total"]
 
     def get_session_count(self) -> int:
         """Get total number of coding sessions."""
         cursor = self._conn.cursor()
-        cursor.execute("SELECT COUNT(*) as count FROM coding_sessions")
+        where, params = self._project_where()
+        cursor.execute(f"SELECT COUNT(*) as count FROM coding_sessions {where}", params)
         row = cursor.fetchone()
         return row["count"]
 
     def get_date_range(self) -> Optional[Tuple[str, str]]:
         """Get the date range of coding sessions (local timezone)."""
         cursor = self._conn.cursor()
-        cursor.execute("""
+        where, params = self._project_where()
+        cursor.execute(f"""
             SELECT
                 date(MIN(start_time) / 1000, 'unixepoch', 'localtime') as earliest,
                 date(MAX(start_time) / 1000, 'unixepoch', 'localtime') as latest
             FROM coding_sessions
-        """)
+            {where}
+        """, params)
         row = cursor.fetchone()
         if row and row["earliest"] and row["latest"]:
             return (row["earliest"], row["latest"])

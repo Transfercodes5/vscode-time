@@ -22,6 +22,15 @@ mkdir -p "$LOCAL_LIB"
 echo "Installing application files to $LOCAL_LIB..."
 cp -r "$SCRIPT_DIR/src/"* "$LOCAL_LIB/"
 
+# Install the CLI entry point
+echo "Installing CLI library to $LOCAL_LIB/vscode_time_cli.py..."
+sed 's|^sys.path.insert(0, os.path.join(os.path.dirname(__file__), .src.))$|_src_dir = os.path.join(os.path.dirname(__file__), '"'"'src'"'"')\nif os.path.isdir(_src_dir) and _src_dir not in sys.path:\n    sys.path.insert(0, _src_dir)|' \
+    "$SCRIPT_DIR/vscode-time" > "$LOCAL_LIB/vscode_time_cli.py"
+chmod +x "$LOCAL_LIB/vscode_time_cli.py"
+
+# Clear stale bytecode
+find "$LOCAL_LIB" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+
 # Install the main CLI
 echo "Installing CLI to $LOCAL_BIN/vscode-time..."
 cat > "$LOCAL_BIN/vscode-time" << 'INSTALLEOF'

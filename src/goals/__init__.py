@@ -386,11 +386,13 @@ class GoalManager:
         start_ms = int(dt_start.timestamp() * 1000)
         end_ms = int(dt_end.timestamp() * 1000)
 
-        cursor.execute("""
+        proj_and, proj_params = self.db._project_and()
+        cursor.execute(f"""
             SELECT COALESCE(SUM(duration_seconds), 0) as total
             FROM coding_sessions
             WHERE start_time >= ? AND start_time < ?
-        """, (start_ms, end_ms))
+            {proj_and}
+        """, (start_ms, end_ms) + proj_params)
 
         row = cursor.fetchone()
         return row["total"]

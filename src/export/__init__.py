@@ -83,7 +83,8 @@ class Exporter:
             start_ms = int(dt_start.timestamp() * 1000)
             end_ms = int(dt_end.timestamp() * 1000)
 
-            cursor.execute("""
+            proj_and, proj_params = self.db._project_and()
+            cursor.execute(f"""
                 SELECT
                     source, source_id, session_type, start_time,
                     duration_seconds, language, file, project,
@@ -91,18 +92,21 @@ class Exporter:
                 FROM coding_sessions
                 WHERE session_type = 0
                   AND start_time >= ? AND start_time <= ?
+                  {proj_and}
                 ORDER BY start_time ASC, source ASC, source_id ASC
-            """, (start_ms, end_ms))
+            """, (start_ms, end_ms) + proj_params)
         else:
-            cursor.execute("""
+            proj_and, proj_params = self.db._project_and()
+            cursor.execute(f"""
                 SELECT
                     source, source_id, session_type, start_time,
                     duration_seconds, language, file, project,
                     vcs, line_count, char_count, source_file
                 FROM coding_sessions
                 WHERE session_type = 0
+                {proj_and}
                 ORDER BY start_time ASC, source ASC, source_id ASC
-            """)
+            """, proj_params)
 
         return [dict(row) for row in cursor.fetchall()]
 

@@ -56,6 +56,7 @@ def print_help():
     print("  status              Show today's status")
     print("  export [options]    Export session data")
     print("  config [key] [val]  Show or set configuration")
+    print("  project [name]      Show or set tracked project")
     print()
     print("Options:")
     print("  --help              Show this help")
@@ -76,6 +77,8 @@ def print_help():
     print(f"  {PROGRAM} export --csv > sessions.csv")
     print(f"  {PROGRAM} config")
     print(f"  {PROGRAM} config daily_goal_seconds 7200")
+    print(f"  {PROGRAM} project")
+    print(f"  {PROGRAM} project Lab_DAA")
 
 
 def print_command_help(command):
@@ -176,13 +179,37 @@ With two arguments, sets the setting.
 
 Supported settings:
   daily_goal_seconds    Daily coding goal in seconds
+  tracked_project       Project filter (empty = all projects)
 
 Examples:
   {PROGRAM} config
   {PROGRAM} config daily_goal_seconds
   {PROGRAM} config daily_goal_seconds 7200
+  {PROGRAM} config tracked_project Lab_DAA
+  {PROGRAM} config tracked_project clear
 
 Configuration is stored at: ~/.config/vscode-time/config.toml""",
+
+        "project": f"""Usage: {PROGRAM} project [name|clear]
+
+Show, set, or clear the tracked project filter.
+
+Without arguments, shows the current tracked project and
+available projects in the database.
+
+With a project name, sets the filter. You can use the full
+path, the project folder name, or the exact stored value.
+
+With "clear", removes the filter (tracks all projects).
+
+Examples:
+  {PROGRAM} project
+  {PROGRAM} project Lab_DAA
+  {PROGRAM} project /home/taksh/Coding/Learn/Lab_DAA
+  {PROGRAM} project clear
+
+When a filter is set, all commands (today, history, stats,
+report, streak, export) only count time from that project.""",
     }
 
     if command in helps:
@@ -193,10 +220,15 @@ Configuration is stored at: ~/.config/vscode-time/config.toml""",
 
 
 def get_db():
-    """Get database connection."""
+    """Get database connection with project filter applied."""
     db_path = Path.home() / ".local" / "share" / "vscode-time" / "vscode-time.db"
     db = Database(db_path)
     db.connect()
+    try:
+        config = load_config()
+        db.project_filter = config.get("tracked_project") or None
+    except ConfigError:
+        pass
     return db
 
 
@@ -235,6 +267,9 @@ def cmd_today(args):
 
     status = manager.get_today_status()
     print(f"Date:     {status.date}")
+    if db.project_filter:
+        from urllib.parse import unquote
+        print(f"Project:  {unquote(db.project_filter)}")
     print(f"Goal:     {format_seconds(status.goal_seconds)}")
     print(f"Coding:   {format_seconds(status.coding_seconds)}")
     print(f"Progress: {status.progress_percent:.0f}%")
@@ -413,6 +448,7 @@ def cmd_status(args):
 
             status_json = {
                 "date": today_status.date,
+                "project": db.project_filter or "",
                 "coding_seconds": today_status.coding_seconds,
                 "coding_duration": format_seconds(today_status.coding_seconds),
                 "goal_seconds": today_status.goal_seconds,
@@ -430,6 +466,7 @@ def cmd_status(args):
             error_json = {
                 "error": str(e),
                 "date": "",
+                "project": "",
                 "coding_seconds": 0,
                 "coding_duration": "0s",
                 "goal_seconds": 0,
@@ -453,6 +490,9 @@ def cmd_status(args):
 
         print("Today")
         print("─────")
+        if db.project_filter:
+            from urllib.parse import unquote
+            print(f"Project:  {unquote(db.project_filter)}")
         print(f"Coding:   {format_seconds(today_status.coding_seconds)}")
         print(f"Goal:     {format_seconds(today_status.goal_seconds)}")
         print(f"Progress: {today_status.progress_percent:.0f}%")
@@ -531,6 +571,12 @@ def cmd_config(args):
             value = config.get(key)
             if key == "daily_goal_seconds":
                 print(f"  Daily goal: {format_seconds(value)}")
+            elif key == "tracked_project":
+                if value:
+                    from urllib.parse import unquote
+                    print(f"  Tracked project: {unquote(value)}")
+                else:
+                    print(f"  Tracked project: (all projects)")
             else:
                 print(f"  {key}: {value}")
         print()
@@ -548,6 +594,9 @@ def cmd_config(args):
         value = config.get(key)
         if key == "daily_goal_seconds":
             print(f"{format_seconds(value)}")
+        elif key == "tracked_project":
+            from urllib.parse import unquote
+            print(unquote(value) if value else "(all projects)")
         else:
             print(f"{value}")
         return
@@ -570,6 +619,15 @@ def cmd_config(args):
                 config.set(key, value)
                 config.save()
                 print(f"Daily goal set to: {format_seconds(value)}")
+            elif key == "tracked_project":
+                config.set_from_input(key, value_str)
+                config.save()
+                val = config.get(key)
+                if val:
+                    from urllib.parse import unquote
+                    print(f"Tracking project: {unquote(val)}")
+                else:
+                    print("Tracking all projects")
             else:
                 eprint(f"Error: cannot set key '{key}' via CLI")
                 sys.exit(1)
@@ -579,6 +637,118 @@ def cmd_config(args):
         except ConfigError as e:
             eprint(f"Error: {e}")
             sys.exit(1)
+
+
+def _resolve_project_name(db, user_input):
+    """Resolve a user-provided project name to the stored project value.
+
+    Matches against the raw stored value, the URL-decoded path,
+    and the short (last-segment) name.
+
+    Returns:
+        (match, candidates) where match is the resolved value or None,
+        and candidates is a list of possible matches if ambiguous.
+    """
+    from urllib.parse import unquote
+
+    projects = db.get_projects()
+
+    # Exact match on stored value
+    if user_input in projects:
+        return user_input, []
+
+    # Match on URL-decoded path
+    decoded_input = unquote(user_input)
+    decoded_matches = [p for p in projects if unquote(p) == decoded_input]
+    if len(decoded_matches) == 1:
+        return decoded_matches[0], []
+    if len(decoded_matches) > 1:
+        return None, decoded_matches
+
+    # Match on short name (last path segment)
+    short_matches = [
+        p for p in projects
+        if unquote(p).split("/")[-1] == user_input or p.split("/")[-1] == user_input
+    ]
+    if len(short_matches) == 1:
+        return short_matches[0], []
+    if len(short_matches) > 1:
+        return None, short_matches
+
+    return None, []
+
+
+def cmd_project(args):
+    """Handle project command."""
+    if args and args[0] in ("--help", "-h"):
+        print_command_help("project")
+        return
+
+    db = get_db()
+    config = load_config()
+
+    if not args:
+        # Show current filter and available projects
+        current = config.get("tracked_project") or ""
+        projects = db.get_projects()
+
+        print("Tracked project")
+        print("───────────────")
+        if current:
+            from urllib.parse import unquote
+            print(f"  {unquote(current)}")
+        else:
+            print("  (all projects)")
+
+        if projects:
+            print()
+            print("Available projects:")
+            for p in projects:
+                from urllib.parse import unquote
+                marker = "→" if p == current else " "
+                print(f"  {marker} {unquote(p)}")
+
+        db.close()
+        return
+
+    # Clear filter
+    if args[0] in ("clear", "all", "none"):
+        config.set("tracked_project", "")
+        config.save()
+        print("Tracking all projects")
+        db.close()
+        return
+
+    # Set filter
+    user_input = args[0]
+    match, candidates = _resolve_project_name(db, user_input)
+
+    if match is None and candidates:
+        eprint(f"Ambiguous project name '{user_input}'. Candidates:")
+        from urllib.parse import unquote
+        for c in candidates:
+            eprint(f"  {unquote(c)}")
+        db.close()
+        sys.exit(1)
+
+    if match is None:
+        eprint(f"Error: project '{user_input}' not found")
+        projects = db.get_projects()
+        if projects:
+            eprint("Available projects:")
+            from urllib.parse import unquote
+            for p in projects:
+                eprint(f"  {unquote(p)}")
+        else:
+            eprint("No projects in database. Run 'vscode-time sync' first.")
+        db.close()
+        sys.exit(1)
+
+    config.set("tracked_project", match)
+    config.save()
+    from urllib.parse import unquote
+    print(f"Tracking project: {unquote(match)}")
+    db.close()
 
 
 def main():
@@ -610,6 +780,7 @@ def main():
         "status": cmd_status,
         "export": cmd_export,
         "config": cmd_config,
+        "project": cmd_project,
         "help": lambda a: print_help(),
     }
 

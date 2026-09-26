@@ -294,16 +294,18 @@ class ReportGenerator:
         
         start_ms = int(dt_start.timestamp() * 1000)
         end_ms = int(dt_end.timestamp() * 1000)
-        
-        cursor.execute("""
+
+        proj_and, proj_params = self.db._project_and()
+        cursor.execute(f"""
             SELECT
                 project,
                 SUM(duration_seconds) as total_seconds
             FROM coding_sessions
             WHERE start_time >= ? AND start_time < ?
+            {proj_and}
             GROUP BY project
             ORDER BY total_seconds DESC, project ASC
-        """, (start_ms, end_ms))
+        """, (start_ms, end_ms) + proj_params)
         
         return [
             ProjectBreakdown(project=row["project"], total_seconds=row["total_seconds"])
@@ -330,16 +332,18 @@ class ReportGenerator:
         
         start_ms = int(dt_start.timestamp() * 1000)
         end_ms = int(dt_end.timestamp() * 1000)
-        
-        cursor.execute("""
+
+        proj_and, proj_params = self.db._project_and()
+        cursor.execute(f"""
             SELECT
                 language,
                 SUM(duration_seconds) as total_seconds
             FROM coding_sessions
             WHERE start_time >= ? AND start_time < ?
+            {proj_and}
             GROUP BY language
             ORDER BY total_seconds DESC, language ASC
-        """, (start_ms, end_ms))
+        """, (start_ms, end_ms) + proj_params)
         
         return [
             LanguageBreakdown(language=row["language"], total_seconds=row["total_seconds"])

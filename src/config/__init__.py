@@ -17,11 +17,12 @@ CONFIG_DIR = Path.home() / ".config" / "vscode-time"
 CONFIG_FILE = CONFIG_DIR / "config.toml"
 
 # Supported configuration keys
-SUPPORTED_KEYS = {"daily_goal_seconds"}
+SUPPORTED_KEYS = {"daily_goal_seconds", "tracked_project"}
 
 # Default configuration values
 DEFAULTS = {
     "daily_goal_seconds": DEFAULT_DAILY_GOAL_SECONDS,
+    "tracked_project": "",
 }
 
 
@@ -138,6 +139,9 @@ class Config:
             if not isinstance(value, int):
                 raise ConfigValidationError(f"daily_goal_seconds must be an integer, got {type(value).__name__}")
             validate_goal(value)
+        elif key == "tracked_project":
+            if not isinstance(value, str):
+                raise ConfigValidationError(f"tracked_project must be a string, got {type(value).__name__}")
 
         self._data[key] = value
 
@@ -162,6 +166,14 @@ class Config:
             validate_goal(value)
             self._data[key] = value
             return value
+
+        if key == "tracked_project":
+            # Empty string or "clear"/"all" means track all projects
+            cleaned = input_str.strip()
+            if cleaned.lower() in ("clear", "all", "none"):
+                cleaned = ""
+            self._data[key] = cleaned
+            return cleaned
 
         raise ConfigValidationError(f"No parser for key: {key}")
 

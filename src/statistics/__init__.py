@@ -160,13 +160,15 @@ class StatisticsCalculator:
             List of dictionaries with language and total_seconds.
         """
         cursor = self.db._conn.cursor()
-        cursor.execute("""
+        where, params = self.db._project_where()
+        cursor.execute(f"""
             SELECT
                 language,
                 SUM(duration_seconds) as total_seconds,
                 COUNT(*) as session_count
             FROM coding_sessions
+            {where}
             GROUP BY language
             ORDER BY total_seconds DESC
-        """)
+        """, params)
         return [dict(row) for row in cursor.fetchall()]
